@@ -92,6 +92,10 @@ def plot_Bolling(df,symbol,band1,band2):
 	plt.show()
 	
 
+def compute_daily_return(df):
+	df_returns=df/df.shift(1)-1
+	return df_return	
+
 
 if __name__=="__main__":
 	df=test_run()
