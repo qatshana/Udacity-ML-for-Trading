@@ -1,48 +1,15 @@
 '''
-Generates dataframe for multiple tickers
+Get Perforamance of Portfolion based on allocation and tickers
 
-input -- ticker.csv 
+input -- ticker.csv, allocation % and tickers 
 
-output -- dataframe with each output column representing one ticker 
+output -- portfolio stats and plots
 
 '''
 
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-
-
-def test_run():
-	''' Scan through the symbols'''
-	start_date='2010-01-22'
-	end_date='2015-02-10'
-	# generate date range
-	dates=pd.date_range(start_date,end_date)	
-	df=pd.DataFrame(index=dates)
-	
-	# gget spy data and organize it
-	symbol='SPY'
-	dfSPY=pd.read_csv("data/{}.csv".format(symbol),index_col="Date",parse_dates=True,
-		usecols=['Date','Adj Close'],
-		na_values=['nan'])
-
-	dfSPY=dfSPY.rename(columns={'Adj Close':'SPY'})	
-	# joine the two sets
-	df=df.join(dfSPY,how='inner') # with inner added, it allows you to remove nan
-
-	symbols=['GOOG','AAPL','GLD','A']
-
-	for symbol in symbols:
-		dfTemp=pd.read_csv("data/{}.csv".format(symbol),index_col="Date",parse_dates=True,
-		usecols=['Date','Adj Close'],
-		na_values=['nan'])
-
-		dfTemp=dfTemp.rename(columns={'Adj Close':symbol})	
-		# joine the two sets
-		df=df.join(dfTemp,how='inner') # with inner added, it allows you to remove nan
-	
-	#print(df1)
-	return df
 
 def load_dataFrame(start_date,end_date,symbols):
 	''' Scan through the symbols'''
@@ -165,29 +132,53 @@ def get_corr(df_returns):
 	return df_returns.corr(method='pearson')
 
 if __name__=="__main__":
-	# initialize the dates and tickers
-	start_date='2010-01-22'
-	end_date='2012-9-12'	
-	symbols=['SPY','GOOG','GE','AAPL','GLD','A','CAT']
-	symbol='AAPL'
+	# Set Portfolio Parameters
+	start_date='2009-01-01'
+	end_date='2011-12-31'	
+	symbols=['SPY','XOM','GOOG','GLD']
+	allocs=[0,0,1,0]
+	start_val=1000000 # start with 1 m
+	''' load stock prices'''
 	df=load_dataFrame(start_date,end_date,symbols)
-	df=normalize_data(df)
-	#plot_stocks(df)
-	(dfmean,dfmedian,dfstd)=get_stats(df)
-	print(dfmean)
-	print(dfstd)
-	rm=get_rolling_mean(df,symbol)
-	std=get_rolling_std(df,symbol)
-	#plot_rm(df,'SPY',rm)
-	band1=rm-2*std
-	band2=rm+2*std
-	#plot_Bolling(df,symbol,band1,band2)
+	''' normalize performance'''
+	dfnormed=normalize_data(df)
+	''' appy allocation to individual stocks'''
+	dfalloced=allocs*dfnormed
+	dfposs_val=dfalloced*start_val
+	''' get total perfomance by day'''
+	dfport_val=dfposs_val.sum(axis=1)
+	''' compute daily returns on portfolio'''
+	df_returns=compute_daily_return(dfport_val)
+	df_daily_rets=df_returns[1:]
+	''' Compute Portfolio Stats'''
+	cum_ret=(dfport_val[-1]/dfport_val[0])-1
+	avg_daily_ret=df_daily_rets.mean()
+	std_daily_ret=df_daily_rets.std()
+	rf_rate_ann=2.0/100
+	rf_rate_daily=rf_rate_ann/365 # need to fix this formula
+	sharpe_ratio=np.sqrt(252)*(avg_daily_ret-rf_rate_daily)/std_daily_ret
+	#print(df_returns)
+	print ('Cummulative returns %5.3f' %cum_ret)	
+	print ('Shape ratio %5.3f' %sharpe_ratio)
 
-	df_returns=compute_daily_return(df)
-	#plot_daily_returns(df_returns,'AAPL')
-	#plot_stocks(df[['AAPL','CAT']])
-	#plot_hist(df_returns,symbol,100)
-	#plot_two_hist(df_returns,'AAPL','GE',100)
-	#plot_scatter(df_returns,'SPY','SPY')
-	dfcor=pd.DataFrame(get_corr(df_returns)) # save correlation matrix as dataframe for future reference
-	print(dfcor.loc['GE']['CAT'])
+	''' Show Results'''
+	fig = plt.figure()
+
+	# Divide the figure into a 2x1 grid, and give me the first section
+	ax1 = fig.add_subplot(121)
+
+	# Divide the figure into a 2x1 grid, and give me the second section
+	ax2 = fig.add_subplot(122)
+	dfport_val.plot(title='Portfolio Perf',ax=ax1,legend=True)
+	ax1.set_ylabel('Value')
+	ax1.set_xlabel('Date')
+	
+
+	dfnormed.plot(title='Stock Perf',ax=ax2,legend=True)
+	
+	#plt.legend(loc='uppder left')
+	ax2.set_ylabel('Price')
+	ax2.set_xlabel('Date')
+	ax2.legend(loc='upper left')
+
+	plt.show()
