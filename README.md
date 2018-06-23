@@ -3,7 +3,7 @@ Several projects for my work on Udacity Class - Machine Learning for Trading
 
 I have worked on serval projects
 
-# 1) Load Stock Prices and Analyze Peformance
+# 1) Load Stock Prices and Analyze Performance
 We load serval stock prices from csv files into pandas dataframe format and analyze/plot results
 
 # 2) Show Portfolio Stats
